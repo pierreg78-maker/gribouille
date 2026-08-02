@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Métamorphose de Gribouilles</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Métamorphose de Gribouilles - Mobile</title>
     <style>
         body {
             margin: 0;
@@ -14,53 +14,69 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
             height: 100vh;
+            height: 100dvh; /* Pour gérer parfaitement la hauteur sur mobile */
             overflow: hidden;
+            box-sizing: border-box;
+            padding: 20px 10px;
+        }
+        header {
+            text-align: center;
         }
         h1 {
-            margin-bottom: 5px;
-            font-size: 1.5rem;
+            margin: 0 0 5px 0;
+            font-size: 1.3rem;
             color: #e94560;
         }
         p {
             color: #b2bec3;
-            margin-bottom: 20px;
+            font-size: 0.9rem;
+            margin: 0;
         }
         canvas {
             background: #16213e;
             border: 2px dashed #0f3460;
-            border-radius: 12px;
+            border-radius: 16px;
             cursor: crosshair;
             box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            touch-action: none; /* Empêche le scroll de la page pendant le dessin */
+            width: 100%;
+            max-width: 450px;
+            height: 60vh;
         }
         #controls {
-            margin-top: 15px;
+            margin-bottom: 10px;
         }
         button {
             background: #e94560;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 12px 24px;
+            border-radius: 12px;
             font-size: 1rem;
+            font-weight: bold;
             cursor: pointer;
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
             transition: background 0.2s;
         }
-        button:hover {
+        button:active {
             background: #d63851;
+            transform: scale(0.98);
         }
     </style>
 </head>
 <body>
 
-    <h1>Métamorphose de Gribouilles</h1>
-    <p>Dessine un trait libre, puis lève le crayon pour voir la magie opérer !</p>
+    <header>
+        <h1>Métamorphose de Gribouilles</h1>
+        <p>Dessine du bout du doigt et admire la magie !</p>
+    </header>
 
-    <canvas id="canvas" width="600" height="400"></canvas>
+    <canvas id="canvas"></canvas>
 
     <div id="controls">
-        <button id="clearBtn">Effacer le canvas</button>
+        <button id="clearBtn">Effacer</button>
     </div>
 
     <script>
@@ -71,38 +87,75 @@
         let isDrawing = false;
         let points = [];
 
-        // Style du trait utilisateur
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 4;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        // Fonction pour ajuster la résolution interne du canvas à sa taille d'affichage CSS
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            
+            // Réappliquer les styles de trait après redimensionnement
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
 
-        canvas.addEventListener('mousedown', (e) => {
+        window.addEventListener('load', resizeCanvas);
+        window.addEventListener('resize', resizeCanvas);
+
+        // Gestion unifiée des coordonnées (Souris ou Tactile)
+        function getClientPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function startDrawing(e) {
+            e.preventDefault();
             isDrawing = true;
             points = [];
             ctx.beginPath();
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            ctx.moveTo(x, y);
-            points.push({x, y});
-        });
+            const pos = getClientPos(e);
+            ctx.moveTo(pos.x, pos.y);
+            points.push(pos);
+        }
 
-        canvas.addEventListener('mousemove', (e) => {
+        function draw(e) {
             if (!isDrawing) return;
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            ctx.lineTo(x, y);
+            e.preventDefault();
+            const pos = getClientPos(e);
+            ctx.lineTo(pos.x, pos.y);
             ctx.stroke();
-            points.push({x, y});
-        });
+            points.push(pos);
+        }
 
-        canvas.addEventListener('mouseup', () => {
+        function stopDrawing(e) {
             if (!isDrawing) return;
+            e.preventDefault();
             isDrawing = false;
-            EtTransformer();
-        });
+            analyserEtTransformer();
+        }
+
+        // Écouteurs Souris
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
+
+        // Écouteurs Tactiles (Mobils/Tablettes)
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing, { passive: false });
 
         clearBtn.addEventListener('click', () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -111,7 +164,6 @@
         function analyserEtTransformer() {
             if (points.length < 5) return;
 
-            // Calculer la boîte englobante (bounding box)
             let minX = Math.min(...points.map(p => p.x));
             let maxX = Math.max(...points.map(p => p.x));
             let minY = Math.min(...points.map(p => p.y));
@@ -122,7 +174,6 @@
             let centerX = minX + width / 2;
             let centerY = minY + height / 2;
 
-            // Vérifier si le trait est fermé (départ proche de la fin)
             let start = points[0];
             let end = points[points.length - 1];
             let distanceDebutFin = Math.hypot(start.x - end.x, start.y - end.y);
@@ -130,54 +181,54 @@
 
             ctx.save();
             
-            // --- NOUVELLE LOGIQUE ICI ---
             if (estFerme) {
-                // 1. Transformation en Planète (inchangé)
+                // Planète
                 let rayon = Math.max(width, height) / 2;
                 ctx.fillStyle = `hsl(${Math.random() * 360}, 70%, 60%)`;
                 ctx.beginPath();
-                ctx.arc(centerX, centerY, rayon * 0.8, 0, Math.PI * 2);
+                ctx.arc(centerX, centerY, Math.max(rayon * 0.8, 20), 0, Math.PI * 2);
                 ctx.fill();
                 ctx.strokeStyle = '#fff';
                 ctx.lineWidth = 2;
                 ctx.stroke();
+
                 ctx.fillStyle = 'rgba(255,255,255,0.3)';
                 ctx.beginPath();
-                ctx.arc(centerX - rayon*0.2, centerY - rayon*0.2, rayon * 0.2, 0, Math.PI * 2);
+                ctx.arc(centerX - rayon*0.2, centerY - rayon*0.2, Math.max(rayon * 0.2, 5), 0, Math.PI * 2);
                 ctx.fill();
 
             } else if (width > height * 1.5) {
-                // 2. NOUVEAU : Si le tracé est large et ouvert -> Poisson !
+                // Poisson
                 let fishColor = `hsl(${Math.random() * 360}, 80%, 70%)`;
                 ctx.fillStyle = fishColor;
                 
-                // Corps du poisson (basé sur la forme du gribouillis)
+                let safeWidth = Math.max(width, 40);
+                let safeHeight = Math.max(height, 20);
+
                 ctx.beginPath();
-                ctx.ellipse(centerX, centerY, width/2, height/2, 0, 0, Math.PI * 2);
+                ctx.ellipse(centerX, centerY, safeWidth/2, safeHeight/2, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Queue (triangle)
                 ctx.beginPath();
-                ctx.moveTo(minX - width*0.2, centerY);
-                ctx.lineTo(minX, centerY - height*0.4);
-                ctx.lineTo(minX, centerY + height*0.4);
+                ctx.moveTo(minX - safeWidth*0.2, centerY);
+                ctx.lineTo(minX, centerY - safeHeight*0.4);
+                ctx.lineTo(minX, centerY + safeHeight*0.4);
                 ctx.fill();
 
-                // Œil
                 ctx.fillStyle = '#fff';
                 ctx.beginPath();
-                ctx.arc(maxX - width*0.2, centerY - height*0.1, width*0.08, 0, Math.PI * 2);
+                ctx.arc(maxX - safeWidth*0.2, centerY - safeHeight*0.1, Math.max(safeWidth*0.08, 3), 0, Math.PI * 2);
                 ctx.fill();
                 ctx.fillStyle = '#1a1a2e';
                 ctx.beginPath();
-                ctx.arc(maxX - width*0.2, centerY - height*0.1, width*0.03, 0, Math.PI * 2);
+                ctx.arc(maxX - safeWidth*0.2, centerY - safeHeight*0.1, Math.max(safeWidth*0.03, 1), 0, Math.PI * 2);
                 ctx.fill();
 
             } else {
-                // 3. Transformation en Fleur (inchangé)
+                // Fleur
                 ctx.fillStyle = '#ff7675';
                 let nbPetales = 6;
-                let rayonFleur = Math.max(width, height) * 0.4;
+                let rayonFleur = Math.max(Math.max(width, height) * 0.4, 25);
                 
                 for (let i = 0; i < nbPetales; i++) {
                     let angle = (i * 2 * Math.PI) / nbPetales;
