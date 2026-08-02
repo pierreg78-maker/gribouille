@@ -45,17 +45,16 @@
             max-width: 450px;
             height: 50vh;
         }
-        /* Palette de tampons horizontale et scrollable */
         #palette {
             display: flex;
             gap: 10px;
             overflow-x: auto;
             max-width: 100%;
             padding: 10px 0;
-            scrollbar-width: none; /* Firefox */
+            scrollbar-width: none;
         }
         #palette::-webkit-scrollbar {
-            display: none; /* Chrome/Safari */
+            display: none;
         }
         .stamp-btn {
             background: #16213e;
@@ -99,12 +98,11 @@
 
     <header>
         <h1>Atelier Poétique</h1>
-        <p>Choisis ton tampon et pose-le sur la toile !</p>
+        <p>Glisse sur l'écran pour ajuster la taille du tampon !</p>
     </header>
 
     <canvas id="canvas"></canvas>
 
-    <!-- La palette des 12 tampons -->
     <div id="palette">
         <div class="stamp-btn active" data-stamp="🌸">🌸</div>
         <div class="stamp-btn" data-stamp="🌳">🌳</div>
@@ -131,8 +129,12 @@
         const stampButtons = document.querySelectorAll('.stamp-btn');
 
         let currentStamp = '🌸';
+        let isInteracting = false;
+        let startPos = { x: 0, y: 0 };
+        let currentPos = { x: 0, y: 0 };
+        let currentSize = 40; // Taille de base
+        let randomAngle = 0;
 
-        // Gestion de la sélection du tampon
         stampButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 stampButtons.forEach(b => b.classList.remove('active'));
@@ -166,29 +168,110 @@
             };
         }
 
-        // Poser un tampon au touché / clic
-        function handleCanvasInteraction(e) {
+        function startInteraction(e) {
             e.preventDefault();
-            const pos = getClientPos(e);
-            
+            isInteracting = true;
+            startPos = getClientPos(e);
+            currentPos = { ...startPos };
+            currentSize = 40; // Taille initiale
+            randomAngle = (Math.random() - 0.5) * 0.4;
+        }
+
+        function moveInteraction(e) {
+            if (!isInteracting) return;
+            e.preventDefault();
+            currentPos = getClientPos(e);
+
+            // Calculer la distance par rapport au point de départ pour ajuster la taille
+            let distance = Math.hypot(currentPos.x - startPos.x, currentPos.y - startPos.y);
+            // Plus on s'éloigne (vers le haut/droite ou autre), plus ça grandit (entre 20px et 150px)
+            currentSize = Math.min(Math.max(40 + distance * 0.5, 20), 150);
+
+            redrawCanvas();
+            // Dessiner un aperçu en direct du tampon à l'emplacement initial avec sa taille dynamique
+            drawStamp(startPos.x, startPos.y, currentSize, randomAngle, 0.7);
+        }
+
+        function endInteraction(e) {
+            if (!isInteracting) return;
+            e.preventDefault();
+            isInteracting = false;
+
+            redrawCanvas();
+            // Poser définitivement le tampon au point de départ avec la taille choisie
+            drawStamp(startPos.x, startPos.y, currentSize, randomAngle, 1.0);
+        }
+
+        function drawStamp(x, y, size, angle, alpha) {
             ctx.save();
-            ctx.font = '48px sans-serif';
+            ctx.globalAlpha = alpha;
+            ctx.font = `${size}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             
-            // Petit effet d'apparition chaleureux (légère rotation aléatoire pour le charme)
-            let angle = (Math.random() - 0.5) * 0.4;
-            ctx.translate(pos.x, pos.y);
+            ctx.translate(x, y);
             ctx.rotate(angle);
-            
             ctx.fillText(currentStamp, 0, 0);
             ctx.restore();
         }
 
-        canvas.addEventListener('click', handleCanvasInteraction);
-        canvas.addEventListener('touchstart', handleCanvasInteraction, { passive: false });
+        // Pour garder l'historique des tampons posés, on dessine sur le canvas au fur et à mesure
+        // Astuce : on garde un tableau des tampons validés si on veut tout redessiner proprement, 
+        // ou on fait plus simple : on valide directement sur le canvas au "mouseup/touchend".
+        
+        let stampsHistory = [];
+
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Redessiner l'historique
+            stampsHistory.forEach(s => {
+                drawStamp(s.x, s.y, s.size, s.angle, 1.0);
+            });
+        }
+
+        // On adapte la fin de l'interaction pour enregistrer dans l'historique
+        function endInteractionWithHistory(e) {
+            if (!isInteracting) return;
+            e.preventDefault();
+            isInteracting = false;
+
+            // Ajouter à l'historique
+            stampsHistory.push({
+                x: startPos.x,
+                y: startPos.y,
+                size: currentSize,
+                angle: randomAngle,
+                stamp: currentStamp
+            });
+
+            // Redessiner tout
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stampsHistory.forEach(s => {
+                // Sauvegarde temporaire du tampon actif pour l'historique
+                let temp = currentStamp;
+                currentStamp = s.stamp;
+                drawStamp(s.x, s.y, s.size, s.angle, 1.0);
+                currentStamp = temp;
+            });
+        }
+
+        // Remplacement de la fin d'interaction
+        canvas.addEventListener('mousedown', startInteraction);
+        canvas.addEventListener('mousemove', moveInteraction);
+        canvas.addEventListener('mouseup', (e) => {
+            if (!isInteracting) return;
+            // Version simplifiée pour le clic souris classique : pose directe ou glissé
+            let dist = Math.hypot(currentPos.x - startPos.x, currentPos.y - startPos.y);
+            if (dist < 5) currentSize = 40; // clic simple
+            endInteractionWithHistory(e);
+        });
+
+        canvas.addEventListener('touchstart', startInteraction, { passive: false });
+        canvas.addEventListener('touchmove', moveInteraction, { passive: false });
+        canvas.addEventListener('touchend', endInteractionWithHistory, { passive: false });
 
         clearBtn.addEventListener('click', () => {
+            stampsHistory = [];
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         });
     </script>
