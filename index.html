@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Métamorphose de Gribouilles - Mobile</title>
+    <title>Atelier de Tampons Poétiques</title>
     <style>
         body {
             margin: 0;
@@ -16,42 +16,22 @@
             align-items: center;
             justify-content: space-between;
             height: 100vh;
-            height: 100dvh; /* Pour gérer parfaitement la hauteur sur mobile */
+            height: 100dvh;
             overflow: hidden;
             box-sizing: border-box;
-            padding: 20px 10px;
+            padding: 10px;
         }
-       .btn-retour {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            padding: 10px 18px;
-            background-color: rgba(255, 255, 255, 0.08);
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 25px;
-            font-size: 0.9rem;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            transition: all 0.3s ease;
-            z-index: 10;
-        }
-        .btn-retour:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
         header {
             text-align: center;
         }
         h1 {
-            margin: 0 0 5px 0;
-            font-size: 1.3rem;
+            margin: 0 0 2px 0;
+            font-size: 1.2rem;
             color: #e94560;
         }
         p {
             color: #b2bec3;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             margin: 0;
         }
         canvas {
@@ -60,70 +40,116 @@
             border-radius: 16px;
             cursor: crosshair;
             box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-            touch-action: none; /* Empêche le scroll de la page pendant le dessin */
+            touch-action: none;
             width: 100%;
             max-width: 450px;
-            height: 60vh;
+            height: 50vh;
+        }
+        /* Palette de tampons horizontale et scrollable */
+        #palette {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            max-width: 100%;
+            padding: 10px 0;
+            scrollbar-width: none; /* Firefox */
+        }
+        #palette::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+        .stamp-btn {
+            background: #16213e;
+            border: 2px solid #0f3460;
+            border-radius: 12px;
+            font-size: 1.5rem;
+            padding: 10px;
+            min-width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .stamp-btn.active {
+            border-color: #e94560;
+            background: #253359;
+            transform: scale(1.05);
         }
         #controls {
-            margin-bottom: 10px;
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
         }
-        button {
+        button.action-btn {
             background: #e94560;
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 12px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
-            transition: background 0.2s;
-        }
-        button:active {
-            background: #d63851;
-            transform: scale(0.98);
         }
     </style>
 </head>
 <body>
- <a href="https://pierreg78-maker.github.io/Atelier/" class="btn-retour">← Retour à l'Atelier</a>
+
     <header>
-        <h1>Métamorphose de Gribouilles</h1>
-        <p>Dessine du bout du doigt et admire la magie !</p>
+        <h1>Atelier Poétique</h1>
+        <p>Choisis ton tampon et pose-le sur la toile !</p>
     </header>
 
     <canvas id="canvas"></canvas>
 
+    <!-- La palette des 12 tampons -->
+    <div id="palette">
+        <div class="stamp-btn active" data-stamp="🌸">🌸</div>
+        <div class="stamp-btn" data-stamp="🌳">🌳</div>
+        <div class="stamp-btn" data-stamp="☀️">☀️</div>
+        <div class="stamp-btn" data-stamp="☁️">☁️</div>
+        <div class="stamp-btn" data-stamp="🐦">🐦</div>
+        <div class="stamp-btn" data-stamp="🦋">🦋</div>
+        <div class="stamp-btn" data-stamp="🐱">🐱</div>
+        <div class="stamp-btn" data-stamp="🏡">🏡</div>
+        <div class="stamp-btn" data-stamp="❤️">❤️</div>
+        <div class="stamp-btn" data-stamp="⭐">⭐</div>
+        <div class="stamp-btn" data-stamp="🎈">🎈</div>
+        <div class="stamp-btn" data-stamp="🌈">🌈</div>
+    </div>
+
     <div id="controls">
-        <button id="clearBtn">Effacer</button>
+        <button class="action-btn" id="clearBtn">Tout effacer</button>
     </div>
 
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const clearBtn = document.getElementById('clearBtn');
+        const stampButtons = document.querySelectorAll('.stamp-btn');
 
-        let isDrawing = false;
-        let points = [];
+        let currentStamp = '🌸';
 
-        // Fonction pour ajuster la résolution interne du canvas à sa taille d'affichage CSS
+        // Gestion de la sélection du tampon
+        stampButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                stampButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentStamp = btn.getAttribute('data-stamp');
+            });
+        });
+
         function resizeCanvas() {
             const rect = canvas.getBoundingClientRect();
             canvas.width = rect.width;
             canvas.height = rect.height;
-            
-            // Réappliquer les styles de trait après redimensionnement
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 5;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
         }
 
         window.addEventListener('load', resizeCanvas);
         window.addEventListener('resize', resizeCanvas);
 
-        // Gestion unifiée des coordonnées (Souris ou Tactile)
         function getClientPos(e) {
             const rect = canvas.getBoundingClientRect();
             let clientX, clientY;
@@ -140,132 +166,31 @@
             };
         }
 
-        function startDrawing(e) {
-            e.preventDefault();
-            isDrawing = true;
-            points = [];
-            ctx.beginPath();
-            const pos = getClientPos(e);
-            ctx.moveTo(pos.x, pos.y);
-            points.push(pos);
-        }
-
-        function draw(e) {
-            if (!isDrawing) return;
+        // Poser un tampon au touché / clic
+        function handleCanvasInteraction(e) {
             e.preventDefault();
             const pos = getClientPos(e);
-            ctx.lineTo(pos.x, pos.y);
-            ctx.stroke();
-            points.push(pos);
+            
+            ctx.save();
+            ctx.font = '48px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Petit effet d'apparition chaleureux (légère rotation aléatoire pour le charme)
+            let angle = (Math.random() - 0.5) * 0.4;
+            ctx.translate(pos.x, pos.y);
+            ctx.rotate(angle);
+            
+            ctx.fillText(currentStamp, 0, 0);
+            ctx.restore();
         }
 
-        function stopDrawing(e) {
-            if (!isDrawing) return;
-            e.preventDefault();
-            isDrawing = false;
-            analyserEtTransformer();
-        }
-
-        // Écouteurs Souris
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseleave', stopDrawing);
-
-        // Écouteurs Tactiles (Mobils/Tablettes)
-        canvas.addEventListener('touchstart', startDrawing, { passive: false });
-        canvas.addEventListener('touchmove', draw, { passive: false });
-        canvas.addEventListener('touchend', stopDrawing, { passive: false });
+        canvas.addEventListener('click', handleCanvasInteraction);
+        canvas.addEventListener('touchstart', handleCanvasInteraction, { passive: false });
 
         clearBtn.addEventListener('click', () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         });
-
-        function analyserEtTransformer() {
-            if (points.length < 5) return;
-
-            let minX = Math.min(...points.map(p => p.x));
-            let maxX = Math.max(...points.map(p => p.x));
-            let minY = Math.min(...points.map(p => p.y));
-            let maxY = Math.max(...points.map(p => p.y));
-            
-            let width = maxX - minX;
-            let height = maxY - minY;
-            let centerX = minX + width / 2;
-            let centerY = minY + height / 2;
-
-            let start = points[0];
-            let end = points[points.length - 1];
-            let distanceDebutFin = Math.hypot(start.x - end.x, start.y - end.y);
-            let estFerme = distanceDebutFin < 50;
-
-            ctx.save();
-            
-            if (estFerme) {
-                // Planète
-                let rayon = Math.max(width, height) / 2;
-                ctx.fillStyle = `hsl(${Math.random() * 360}, 70%, 60%)`;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, Math.max(rayon * 0.8, 20), 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                ctx.beginPath();
-                ctx.arc(centerX - rayon*0.2, centerY - rayon*0.2, Math.max(rayon * 0.2, 5), 0, Math.PI * 2);
-                ctx.fill();
-
-            } else if (width > height * 1.5) {
-                // Poisson
-                let fishColor = `hsl(${Math.random() * 360}, 80%, 70%)`;
-                ctx.fillStyle = fishColor;
-                
-                let safeWidth = Math.max(width, 40);
-                let safeHeight = Math.max(height, 20);
-
-                ctx.beginPath();
-                ctx.ellipse(centerX, centerY, safeWidth/2, safeHeight/2, 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.beginPath();
-                ctx.moveTo(minX - safeWidth*0.2, centerY);
-                ctx.lineTo(minX, centerY - safeHeight*0.4);
-                ctx.lineTo(minX, centerY + safeHeight*0.4);
-                ctx.fill();
-
-                ctx.fillStyle = '#fff';
-                ctx.beginPath();
-                ctx.arc(maxX - safeWidth*0.2, centerY - safeHeight*0.1, Math.max(safeWidth*0.08, 3), 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#1a1a2e';
-                ctx.beginPath();
-                ctx.arc(maxX - safeWidth*0.2, centerY - safeHeight*0.1, Math.max(safeWidth*0.03, 1), 0, Math.PI * 2);
-                ctx.fill();
-
-                                    } else {
-                // Fleur (plus compacte et élégante)
-                ctx.fillStyle = '#ff7675';
-                let nbPetales = 6;
-                let rayonMax = Math.max(width, height);
-                let rayonFleur = Math.max(rayonMax * 0.2, 15); // Taille réduite
-                
-                for (let i = 0; i < nbPetales; i++) {
-                    let angle = (i * 2 * Math.PI) / nbPetales;
-                    let px = centerX + Math.cos(angle) * rayonFleur;
-                    let py = centerY + Math.sin(angle) * rayonFleur;
-                    ctx.beginPath();
-                    ctx.arc(px, py, rayonFleur * 0.6, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                ctx.fillStyle = '#fdcb6e';
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, rayonFleur * 0.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore(); // <-- Ne pas oublier de restaurer le contexte !
-        }
     </script>
 </body>
 </html>
