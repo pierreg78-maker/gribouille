@@ -101,7 +101,7 @@
         canvas.addEventListener('mouseup', () => {
             if (!isDrawing) return;
             isDrawing = false;
-            analyserEtTransformer();
+            EtTransformer();
         });
 
         clearBtn.addEventListener('click', () => {
@@ -129,8 +129,10 @@
             let estFerme = distanceDebutFin < 50;
 
             ctx.save();
+            
+            // --- NOUVELLE LOGIQUE ICI ---
             if (estFerme) {
-                // Transformation en Planète / Bulle magique
+                // 1. Transformation en Planète (inchangé)
                 let rayon = Math.max(width, height) / 2;
                 ctx.fillStyle = `hsl(${Math.random() * 360}, 70%, 60%)`;
                 ctx.beginPath();
@@ -139,14 +141,40 @@
                 ctx.strokeStyle = '#fff';
                 ctx.lineWidth = 2;
                 ctx.stroke();
-
-                // Ajout d'un anneau ou de cratères mignons
                 ctx.fillStyle = 'rgba(255,255,255,0.3)';
                 ctx.beginPath();
                 ctx.arc(centerX - rayon*0.2, centerY - rayon*0.2, rayon * 0.2, 0, Math.PI * 2);
                 ctx.fill();
+
+            } else if (width > height * 1.5) {
+                // 2. NOUVEAU : Si le tracé est large et ouvert -> Poisson !
+                let fishColor = `hsl(${Math.random() * 360}, 80%, 70%)`;
+                ctx.fillStyle = fishColor;
+                
+                // Corps du poisson (basé sur la forme du gribouillis)
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, width/2, height/2, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Queue (triangle)
+                ctx.beginPath();
+                ctx.moveTo(minX - width*0.2, centerY);
+                ctx.lineTo(minX, centerY - height*0.4);
+                ctx.lineTo(minX, centerY + height*0.4);
+                ctx.fill();
+
+                // Œil
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(maxX - width*0.2, centerY - height*0.1, width*0.08, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#1a1a2e';
+                ctx.beginPath();
+                ctx.arc(maxX - width*0.2, centerY - height*0.1, width*0.03, 0, Math.PI * 2);
+                ctx.fill();
+
             } else {
-                // Transformation en Fleur fantastique
+                // 3. Transformation en Fleur (inchangé)
                 ctx.fillStyle = '#ff7675';
                 let nbPetales = 6;
                 let rayonFleur = Math.max(width, height) * 0.4;
@@ -159,7 +187,6 @@
                     ctx.arc(px, py, rayonFleur * 0.5, 0, Math.PI * 2);
                     ctx.fill();
                 }
-                // Cœur de la fleur
                 ctx.fillStyle = '#fdcb6e';
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, rayonFleur * 0.4, 0, Math.PI * 2);
