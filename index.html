@@ -224,27 +224,27 @@
                 ctx.arc(maxX - safeWidth*0.2, centerY - safeHeight*0.1, Math.max(safeWidth*0.03, 1), 0, Math.PI * 2);
                 ctx.fill();
 
-            } else {
-                // Fleur
+                        } else {
+                // Fleur (plus compacte et élégante)
                 ctx.fillStyle = '#ff7675';
                 let nbPetales = 6;
-                let rayonFleur = Math.max(Math.max(width, height) * 0.4, 25);
+                let rayonMax = Math.max(width, height);
+                let rayonFleur = Math.max(rayonMax * 0.2, 15); // Taille réduite
                 
                 for (let i = 0; i < nbPetales; i++) {
                     let angle = (i * 2 * Math.PI) / nbPetales;
                     let px = centerX + Math.cos(angle) * rayonFleur;
                     let py = centerY + Math.sin(angle) * rayonFleur;
                     ctx.beginPath();
-                    ctx.arc(px, py, rayonFleur * 0.5, 0, Math.PI * 2);
+                    ctx.arc(px, py, rayonFleur * 0.6, 0, Math.PI * 2);
                     ctx.fill();
                 }
                 ctx.fillStyle = '#fdcb6e';
                 ctx.beginPath();
-                ctx.arc(centerX, centerY, rayonFleur * 0.4, 0, Math.PI * 2);
+                ctx.arc(centerX, centerY, rayonFleur * 0.5, 0, Math.PI * 2);
                 ctx.fill();
             }
-            ctx.restore();
-        }
+
     </script>
 </body>
 </html>
